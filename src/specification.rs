@@ -1,15 +1,18 @@
+use strum::EnumIter;
+
 #[repr(C, packed)]
-struct DosHeader {
-    e_magic: u16,
-    _padding: [u8; 58],
-    e_lfanew: u32,
+pub struct DosHeader {
+    pub e_magic: u16,
+    pub _padding: [u8; 58],
+    pub e_lfanew: u32,
 }
 
-const DOS_HEADER_MAGIC: u16 = 0x5a4d;
-const PE_HEADER_MAGIC: u32 = 0x50450000;
+pub const DOS_HEADER_MAGIC: u16 = 0x5a4d;
+pub const PE_HEADER_MAGIC: u32 = 0x50450000;
 
 #[repr(u16)]
-enum MachineType {
+#[derive(EnumIter)]
+pub enum MachineType {
     Unknown = 0,
     Alpha = 0x184,
     Alpha64_or_AXP64 = 0x284,
@@ -42,14 +45,14 @@ enum MachineType {
 }
 
 #[repr(u16)]
-enum Characteristics {
+#[derive(EnumIter)]
+pub enum Characteristics {
     RelocsStripped = 0x0001,
     ExecutableImage = 0x0002,
     LineNumsStripped = 0x0004,
     LocalSymsStripped = 0x0008,
     AgressiveWSTrim = 0x0010,
     LargeAddressAware = 0x0020,
-    _Reserved1 = 0x0040,
     LittleEndian = 0x0080,
     Machine32bit = 0x0100,
     DebugStripped = 0x0200,
@@ -59,33 +62,47 @@ enum Characteristics {
     UpSystemOnly = 0x4000,
     BigEndian = 0x8000,
 }
-
-#[repr(C, packed)]
-struct CoffHeader {
-    machine: MachineType,
-    number_of_sections: u16,
-    time_date_stamp: u32,
-    pointer_to_symbol_table: u32,
-    number_of_symbols: u32,
-    size_of_optional_header: u16,
-    characteristics: u16,
+impl Into<u16> for Characteristics {
+    fn into(self) -> u16 {
+        self as u16
+    }
 }
 
 #[repr(C, packed)]
-struct OptionalHeadersStandard {
-    magic: u16,
-    major_linker_version: u8,
-    minor_linker_version: u8,
-    size_of_code: u32,
-    size_of_initialized_data: u32,
-    size_of_uninitialized_data: u32,
-    address_of_entry_point: u32,
-    base_of_code: u32,
-    base_of_data: u32, // should not read if pe32+
+pub struct CoffHeader {
+    pub magic: u32,
+    pub machine: MachineType,
+    pub number_of_sections: u16,
+    pub time_date_stamp: u32,
+    pub pointer_to_symbol_table: u32,
+    pub number_of_symbols: u32,
+    pub size_of_optional_header: u16,
+    pub characteristics: u16,
 }
 
 #[repr(u16)]
-enum Subsystem {
+pub enum OptionalMagic {
+    PE32 = 0x10b,
+    PE32Plus = 0x20b,
+    ROM = 0x107,
+}
+
+#[repr(C, packed)]
+pub struct OptionalHeadersStandard {
+    pub magic: OptionalMagic,
+    pub major_linker_version: u8,
+    pub minor_linker_version: u8,
+    pub size_of_code: u32,
+    pub size_of_initialized_data: u32,
+    pub size_of_uninitialized_data: u32,
+    pub address_of_entry_point: u32,
+    pub base_of_code: u32,
+    pub base_of_data: u32, // should not read if pe32+
+}
+
+#[repr(u16)]
+#[derive(EnumIter)]
+pub enum Subsystem {
     Unknown = 0,
     Native = 1,
     WindowsGUI = 2,
@@ -103,11 +120,8 @@ enum Subsystem {
 }
 
 #[repr(u16)]
-enum DllCharacteristics {
-    _Reserved1 = 0x0001,
-    _Reserver2 = 0x0002,
-    _Reserved3 = 0x0004,
-    _Reserved4 = 0x0008,
+#[derive(EnumIter)]
+pub enum DllCharacteristics {
     HighEntropyVA = 0x0020,
     DynamicBase = 0x0040,
     ForceIntegrity = 0x0080,
@@ -125,40 +139,7 @@ trait WindowsHeaderNum {}
 impl WindowsHeaderNum for u32 {}
 impl WindowsHeaderNum for u64 {}
 
-#[repr(C, packed)]
-struct DataDirectory {
-    virtual_address: u32,
-    size: u32,
-}
-const DATA_DIRS_COUNT: usize = 16;
-
-#[repr(C, packed)]
-struct OptionalHeadersWindows<T: WindowsHeaderNum> {
-    image_base: T,
-    section_alignment: u32,
-    file_alignment: u32,
-    major_operating_system_version: u16,
-    minor_operating_system_version: u16,
-    major_image_version: u16,
-    minor_image_versioin: u16,
-    major_subsystem_version: u16,
-    minor_subsystem_version: u16,
-    _win32_version_value: u32, // must be zero
-    size_of_image: u32,
-    size_of_headers: u32,
-    check_sum: u32,
-    subsystem: Subsystem,
-    dll_characteristics: DllCharacteristics,
-    size_of_stack_reserve: T,
-    size_of_stack_commit: T,
-    size_of_heap_reserve: T,
-    size_of_heap_commit: T,
-    _loader_flags: u32, // must be zero
-    number_of_rva_and_sizes: u32,
-
-    directories: [DataDirectory; DATA_DIRS_COUNT],
-}
-
+#[derive(Clone)]
 pub enum DataDirectories {
     ExportTable,
     ImportTable,
@@ -177,6 +158,7 @@ pub enum DataDirectories {
     CLRRuntimeHeader,
     _Reserved,
 }
+
 impl Into<usize> for DataDirectories {
     fn into(self) -> usize {
         match self {
@@ -199,8 +181,49 @@ impl Into<usize> for DataDirectories {
         }
     }
 }
+impl std::hash::Hash for DataDirectories {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let val: usize = self.clone().into();
+        val.hash(state);
+    }
+}
+
+#[repr(C, packed)]
+pub struct DataDirectory {
+    pub virtual_address: u32,
+    pub size: u32,
+}
+const DATA_DIRS_COUNT: usize = 16;
+
+#[repr(C, packed)]
+pub struct OptionalHeadersWindows<T: WindowsHeaderNum> {
+    pub image_base: T,
+    pub section_alignment: u32,
+    pub file_alignment: u32,
+    pub major_operating_system_version: u16,
+    pub minor_operating_system_version: u16,
+    pub major_image_version: u16,
+    pub minor_image_versioin: u16,
+    pub major_subsystem_version: u16,
+    pub minor_subsystem_version: u16,
+    pub _win32_version_value: u32, // must be zero
+    pub size_of_image: u32,
+    pub size_of_headers: u32,
+    pub check_sum: u32,
+    pub subsystem: Subsystem,
+    pub dll_characteristics: DllCharacteristics,
+    pub size_of_stack_reserve: T,
+    pub size_of_stack_commit: T,
+    pub size_of_heap_reserve: T,
+    pub size_of_heap_commit: T,
+    pub _loader_flags: u32, // must be zero
+    pub number_of_rva_and_sizes: u32,
+
+    pub directories: [DataDirectory; DATA_DIRS_COUNT],
+}
 
 #[repr(u32)]
+#[derive(EnumIter)]
 pub enum SectionFlags {
     TypeNoPad = 0x00000008,
     ContainsCode = 0x00000020,
@@ -233,19 +256,24 @@ pub enum SectionFlags {
     MemRead = 0x40000000,
     MemWrite = 0x80000000,
 }
+impl Into<u32> for SectionFlags {
+    fn into(self) -> u32 {
+        self as u32
+    }
+}
 
 #[repr(C, packed)]
 pub struct Section {
-    name: [u8; 8],
-    virtual_size: u32,
-    virtual_address: u32,
-    size_of_raw_data: u32,
-    pointer_to_raw_data: u32,
-    pointer_to_relocation: u32,
-    pointer_to_line_numbers: u32,
-    number_of_relocations: u16,
-    number_of_line_numbers: u16,
-    characteristics: u32,
+    pub name: [u8; 8],
+    pub virtual_size: u32,
+    pub virtual_address: u32,
+    pub size_of_raw_data: u32,
+    pub pointer_to_raw_data: u32,
+    pub pointer_to_relocation: u32,
+    pub pointer_to_line_numbers: u32,
+    pub number_of_relocations: u16,
+    pub number_of_line_numbers: u16,
+    pub characteristics: u32,
 }
 
 #[cfg(test)]
