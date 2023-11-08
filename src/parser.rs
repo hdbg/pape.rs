@@ -11,16 +11,17 @@ pub enum ParserError {
     #[error("COFF Header magic value is wrong")]
     COFFHeaderInvalidMagic,
     #[error("Invalid COFF.time_stamp")]
-    InvalidTimeStamp
+    InvalidTimeStamp,
 }
 
 unsafe fn parse_coff(coff: *const CoffHeader) -> Result<COFF, ParserError> {
     let coff = coff.as_ref().unwrap();
     let mut timestamp_seconds = DateTime::UNIX_EPOCH.timestamp() as u64;
-    timestamp_seconds &= 0xffffffff00000000; // null the lsb part
+    timestamp_seconds &= (u32::MAX as u64) << u64::BITS / 2; // null the lsb part
     timestamp_seconds |= coff.time_date_stamp as u64;
 
-    let timestamp = DateTime::<Utc>::from_timestamp(timestamp_seconds as i64, 0);
+    let timestamp = DateTime::<Utc>::from_timestamp(timestamp_seconds as i64, 0)
+        .ok_or(ParserError::InvalidTimeStamp)?;
     Ok(COFF {
         machine: coff.machine,
         time_stamp: timestamp,
@@ -44,7 +45,7 @@ pub unsafe fn from_ptr(x: *const u8) -> Result<Image, ParserError> {
         as *const OptionalHeadersStandard;
 
     // here begins parsing logic
-    let coff = parse_coff()
+    let coff = parse_coff(coff_header);
 
     Ok(image)
 }

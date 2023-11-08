@@ -11,7 +11,7 @@ pub const DOS_HEADER_MAGIC: u16 = 0x5a4d;
 pub const PE_HEADER_MAGIC: u32 = 0x50450000;
 
 #[repr(u16)]
-#[derive(EnumIter)]
+#[derive(EnumIter, Clone, Copy)]
 pub enum MachineType {
     Unknown = 0,
     Alpha = 0x184,
@@ -45,7 +45,7 @@ pub enum MachineType {
 }
 
 #[repr(u16)]
-#[derive(EnumIter)]
+#[derive(EnumIter, Clone, Copy)]
 pub enum Characteristics {
     RelocsStripped = 0x0001,
     ExecutableImage = 0x0002,
@@ -81,6 +81,7 @@ pub struct CoffHeader {
 }
 
 #[repr(u16)]
+#[derive(Copy, Clone)]
 pub enum OptionalMagic {
     PE32 = 0x10b,
     PE32Plus = 0x20b,
@@ -101,7 +102,7 @@ pub struct OptionalHeadersStandard {
 }
 
 #[repr(u16)]
-#[derive(EnumIter)]
+#[derive(EnumIter, Copy, Clone)]
 pub enum Subsystem {
     Unknown = 0,
     Native = 1,
@@ -120,7 +121,7 @@ pub enum Subsystem {
 }
 
 #[repr(u16)]
-#[derive(EnumIter)]
+#[derive(EnumIter, Copy, Clone)]
 pub enum DllCharacteristics {
     HighEntropyVA = 0x0020,
     DynamicBase = 0x0040,
@@ -135,7 +136,7 @@ pub enum DllCharacteristics {
     TerminalServerAware = 0x8000,
 }
 
-trait WindowsHeaderNum {}
+pub trait WindowsHeaderNum {}
 impl WindowsHeaderNum for u32 {}
 impl WindowsHeaderNum for u64 {}
 
@@ -223,7 +224,7 @@ pub struct OptionalHeadersWindows<T: WindowsHeaderNum> {
 }
 
 #[repr(u32)]
-#[derive(EnumIter)]
+#[derive(EnumIter, Copy, Clone)]
 pub enum SectionFlags {
     TypeNoPad = 0x00000008,
     ContainsCode = 0x00000020,

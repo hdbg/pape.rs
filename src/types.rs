@@ -3,66 +3,7 @@ use chrono::offset::Utc;
 use num_traits::int::PrimInt;
 use std::collections::HashMap;
 
-mod collections {
-    pub mod enumset {
-        use std::{collections::HashSet, marker::PhantomData};
-
-        use num_traits::int::PrimInt;
-        use strum::IntoEnumIterator;
-
-        #[derive(Clone, Default)]
-        pub struct EnumSet<K, T>
-        where
-            T: PrimInt + Default,
-            K: Into<T> + IntoEnumIterator,
-        {
-            data: T,
-            _dat: PhantomData<K>,
-        }
-
-        impl<K, T> EnumSet<K, T>
-        where
-            T: PrimInt + Default,
-            K: Into<T> + IntoEnumIterator,
-        {
-            pub fn new() -> Self {
-                Self {
-                    data: T::zero(),
-                    _dat: PhantomData::default(),
-                }
-            }
-
-            pub fn contains(&self, x: K) -> bool {
-                (self.data & K::into(x)) > T::zero()
-            }
-            pub fn insert(&mut self, x: K) {
-                self.data = self.data | K::into(x);
-            }
-
-            pub fn repr(&self) -> T {
-                self.data
-            }
-        }
-
-        impl<K, T> From<T> for EnumSet<K, T>
-        where
-            T: PrimInt + Default,
-            K: Into<T> + IntoEnumIterator,
-        {
-            fn from(value: T) -> Self {
-                let mut data = T::zero();
-                for item in K::iter() {
-                    let num_representation = K::into(item);
-                    data = data | num_representation;
-                }
-                Self {
-                    data,
-                    _dat: PhantomData::default(),
-                }
-            }
-        }
-    }
-}
+mod collections;
 pub use collections::enumset::EnumSet;
 
 pub struct Version<T: PrimInt> {
@@ -136,7 +77,7 @@ impl Default for Image {
             magic: OptionalMagic::PE32,
             coff: COFF {
                 machine: MachineType::Unknown,
-                time_stamp: std::time::SystemTime::UNIX_EPOCH,
+                time_stamp: chrono::DateTime::<Utc>::UNIX_EPOCH,
                 characteristics: EnumSet::new(),
             },
             optional: None,
